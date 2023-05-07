@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 	"github.com/zachmdsi/go-token-cli/cmd/createdcontracts"
+	"github.com/zachmdsi/go-token-cli/cmd/genprofiles"
 	"github.com/zachmdsi/go-token-cli/cmd/newerc20s"
 	"github.com/zachmdsi/go-token-cli/cmd/newuniswaptokens"
 )
@@ -20,6 +21,7 @@ func main() {
 			createdcontracts.Command(),
 			newerc20s.Command(),
 			newuniswaptokens.Command(),
+			genprofiles.Command(),
 		},
 	}
 

@@ -2,6 +2,7 @@ package createdcontracts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -9,24 +10,24 @@ import (
 )
 
 func FindCreatedContracts(ethNodeURL string, numBlocks uint64) ([]string, error) {
-	fmt.Println("Searching for created contracts")
+	fmt.Println("\nSearching for created contracts")
 	cl, err := ethclient.Dial(ethNodeURL)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Failed to create ethclient: " + err.Error())
 	}
 
 	blockNum, err := cl.BlockNumber(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, errors.New("Failed to get block number: " + err.Error())
 	}
 	startBlockNum := blockNum - numBlocks
 
-	fmt.Printf("Iterate over %d blocks from %d\n", numBlocks, startBlockNum)
+	fmt.Printf("Iterate over %d blocks from %d -> %d\n", numBlocks, startBlockNum, blockNum)
 	var addresses []string
 	for i := startBlockNum; i <= blockNum; i++ {
 		block, err := cl.BlockByNumber(context.Background(), big.NewInt(int64(i)))
 		if err != nil {
-			return nil, err
+			return nil, errors.New("Failed to get block number: " + err.Error())
 		}
 
 		for _, tx := range block.Transactions() {
@@ -35,5 +36,8 @@ func FindCreatedContracts(ethNodeURL string, numBlocks uint64) ([]string, error)
 			}
 		}
 	}
+
+	fmt.Printf("Found %d newly created contracts\n", len(addresses))
+
 	return addresses, nil
 }

@@ -3,6 +3,8 @@ package newuniswaptokens
 import (
 	"github.com/urfave/cli/v2"
 	"github.com/zachmdsi/go-token-cli/internal/config"
+	"github.com/zachmdsi/go-token-cli/internal/createdcontracts"
+	"github.com/zachmdsi/go-token-cli/internal/newerc20s"
 	"github.com/zachmdsi/go-token-cli/internal/newuniswaptokens"
 )
 
@@ -24,7 +26,15 @@ func Command() *cli.Command {
 				panic("Failed to load config:\n\t\t" + err.Error())
 			}
 			numBlocks := uint64(ctx.Int64("num-blocks"))
-			_, err = newuniswaptokens.FindNewUniswapTokens(conf.EthNodeURL, numBlocks)
+			txs, err := createdcontracts.FindCreatedContracts(conf.EthNodeURL, numBlocks)
+			if err != nil {
+				panic("Failed to create contracts:\n\t\t" + err.Error())
+			}
+			erc20Addresses, err := newerc20s.FindERC20Tokens(conf.EthNodeURL, txs, numBlocks)
+			if err != nil {
+				panic("Failed to find ERC20 tokens:\n\t\t" + err.Error())
+			}
+			_, err = newuniswaptokens.FindNewUniswapTokens(conf.EthNodeURL, erc20Addresses, numBlocks)
 			if err != nil {
 				panic("Failed to search for created contracts:\n\t\t" + err.Error())
 			}
