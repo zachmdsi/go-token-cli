@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func FindCreatedContracts(ethNodeURL string) ([]string, error) {
+func FindCreatedContracts(ethNodeURL string, numBlocks uint64) ([]string, error) {
 	fmt.Println("Searching for created contracts")
 	cl, err := ethclient.Dial(ethNodeURL)
 	if err != nil {
@@ -19,7 +19,6 @@ func FindCreatedContracts(ethNodeURL string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	numBlocks := uint64(100)
 	startBlockNum := blockNum - numBlocks
 
 	fmt.Printf("Iterate over %d blocks from %d\n", numBlocks, startBlockNum)

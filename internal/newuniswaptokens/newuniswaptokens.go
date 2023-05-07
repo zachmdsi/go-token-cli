@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"unicode"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -19,18 +20,13 @@ type Token struct {
 	priceInWETH *big.Float
 }
 
-var (
-	uniswapFactoryAddress = common.HexToAddress("0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f") // Uniswap V2 Factory contract address
-	wethAddress           = common.HexToAddress("0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2") // Wrapped Ether (WETH) contract address
-)
-
-func FindNewUniswapTokens(ethNodeURL string) ([]Token, error) {
+func FindNewUniswapTokens(ethNodeURL string, numBlocks uint64) ([]Token, error) {
 	fmt.Println("Finding new Uniswap WETH pairs")
 	cl, err := ethclient.Dial(ethNodeURL)
 	if err != nil {
 		return nil, err
 	}
-	erc20Addresses, err := newerc20s.FindERC20Tokens(ethNodeURL)
+	erc20Addresses, err := newerc20s.FindERC20Tokens(ethNodeURL, numBlocks)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +45,11 @@ func FindNewUniswapTokens(ethNodeURL string) ([]Token, error) {
 				} else if priceInWETH == nil {
 					continue
 				}
-				uniswapPairPrices = append(uniswapPairPrices, Token{tokenAddress, priceInWETH})
 				formattedPrice := priceInWETH.Text('f', 18)
-				fmt.Printf("%s | https://app.uniswap.org/#/swap?inputCurrency=%s\n", formattedPrice, addr)
+				if !onlyZeroAndNonDigits(formattedPrice) {
+					uniswapPairPrices = append(uniswapPairPrices, Token{tokenAddress, priceInWETH})
+					fmt.Printf("%s | https://app.uniswap.org/#/swap?inputCurrency=%s\n", formattedPrice, addr)
+				}
 
 			}
 		}
@@ -66,11 +64,11 @@ func isTokenOnUniswap(client *ethclient.Client, tokenAddress common.Address) (bo
 		return false, err
 	}
 
-	factory := bind.NewBoundContract(uniswapFactoryAddress, factoryABI, client, client, client)
+	factory := bind.NewBoundContract(utils.UniswapFactoryAddress, factoryABI, client, client, client)
 
 	var pairAddress common.Address
 	var result []interface{}
-	err = factory.Call(&bind.CallOpts{}, &result, "getPair", tokenAddress, wethAddress)
+	err = factory.Call(&bind.CallOpts{}, &result, "getPair", tokenAddress, utils.WETHAddress)
 	if err != nil {
 		return false, err
 	}
@@ -83,48 +81,41 @@ func isTokenOnUniswap(client *ethclient.Client, tokenAddress common.Address) (bo
 }
 
 func getTokenPriceInWETH(cl *ethclient.Client, tokenAddress common.Address) (*big.Float, error) {
-	// Parse Uniswap V2 Factory ABI
 	factoryABI, err := abi.JSON(strings.NewReader(utils.UniswapV2FactoryABI))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse Uniswap V2 Factory ABI: %v", err)
+		return nil, err
 	}
 
-	// Create a bound contract instance for the Uniswap V2 Factory
-	factory := bind.NewBoundContract(uniswapFactoryAddress, factoryABI, cl, cl, cl)
+	factory := bind.NewBoundContract(utils.UniswapFactoryAddress, factoryABI, cl, cl, cl)
 
-	// Get the pair address for the given token and WETH
 	var pairAddress common.Address
 	var factoryCallResult []interface{}
-	err = factory.Call(&bind.CallOpts{}, &factoryCallResult, "getPair", tokenAddress, wethAddress)
+	err = factory.Call(&bind.CallOpts{}, &factoryCallResult, "getPair", tokenAddress, utils.WETHAddress)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Uniswap pair address: %v", err)
+		return nil, err
 	}
 	if len(factoryCallResult) > 0 {
 		pairAddress = factoryCallResult[0].(common.Address)
 	}
 
-	// Parse Uniswap V2 Pair ABI
 	pairABI, err := abi.JSON(strings.NewReader(utils.UniswapV2PairABI))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse Uniswap V2 Pair ABI: %v", err)
+		return nil, err
 	}
 
-	// Create a bound contract instance for the Uniswap V2 Pair
 	pair := bind.NewBoundContract(pairAddress, pairABI, cl, cl, cl)
 
-	// Get the reserves of the given token and WETH
 	var reserves [2]*big.Int
 	var pairCallResult []interface{}
 	err = pair.Call(&bind.CallOpts{}, &pairCallResult, "getReserves")
 	if err != nil {
-		return nil, fmt.Errorf("failed to get reserves: %v", err)
+		return nil, err
 	}
 	if len(pairCallResult) > 1 {
 		reserves[0] = pairCallResult[0].(*big.Int)
 		reserves[1] = pairCallResult[1].(*big.Int)
 	}
 
-	// Get token0 address
 	var token0Address common.Address
 	var pairCallResultToken0 []interface{}
 	err = pair.Call(&bind.CallOpts{}, &pairCallResultToken0, "token0")
@@ -181,4 +172,13 @@ func getTokenDecimals(cl *ethclient.Client, tokenAddress common.Address) (uint8,
 	}
 
 	return decimals, nil
+}
+
+func onlyZeroAndNonDigits(s string) bool {
+	for _, r := range s {
+		if unicode.IsDigit(r) && r != '0' {
+			return false
+		}
+	}
+	return true
 }
