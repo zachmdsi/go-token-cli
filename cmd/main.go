@@ -11,8 +11,8 @@ import (
 
 func main() {
 	app := &cli.App{
-		Name:     "low-cap-token-cli",
-		Usage:    "Query data about tokens on the Ethereum blockchain.",
+		Name:     "go-token-cli",
+		Usage:    "View data about newly minted tokens on the Ethereum blockchain.",
 		Compiled: time.Now(),
 		Commands: []*cli.Command{
 			commands.NewUniswapTokens(),

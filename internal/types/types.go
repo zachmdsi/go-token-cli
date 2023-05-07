@@ -8,24 +8,24 @@ import (
 )
 
 type Token struct {
-	Address              common.Address
-	Name                 string
-	Symbol               string
-	Decimals             uint8
-	TotalSupply          *big.Int
-	CirculatingSupply    *big.Int
-	MarketCap            *big.Float
-	Price                *big.Float
-	Volume24h            *big.Float
-	PriceChange24h       *big.Float
-	Holders              uint64
-	LargestHolders       []TokenHolder
-	ContractCreationDate time.Time
-	ContractCreator      common.Address
-	TokenTransfers       uint64
-	AverageTransferValue *big.Float
-	ContractSourceCode   string
-	PriceInWETH          *big.Float
+	Address              common.Address   // .
+	Name                 string           // .
+	Symbol               string           // .
+	Decimals             uint8            // .
+	TotalSupply          *big.Int         //
+	CirculatingSupply    *big.Int         //
+	MarketCap            *big.Float       //
+	Price                *big.Float       //
+	Volume24h            *big.Float       //
+	PriceChange24h       *big.Float       //
+	Holders              uint64           // 
+	LargestHolders       []TokenHolder    //
+	ContractCreationDate time.Time        //
+	ContractCreator      common.Address   //
+	TokenTransfers       uint64           //
+	AverageTransferValue *big.Float       //
+	ContractSourceCode   string           //
+	UniswapPriceInWETH          *big.Float       // .
 }
 
 type TokenHolder struct {
