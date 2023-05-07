@@ -15,7 +15,6 @@ func main() {
 		Usage:    "View data about newly minted tokens on the Ethereum blockchain.",
 		Compiled: time.Now(),
 		Commands: []*cli.Command{
-			commands.NewUniswapTokens(),
 			commands.GenerateProfiles(),
 		},
 	}

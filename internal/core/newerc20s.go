@@ -1,4 +1,4 @@
-package functions
+package core
 
 import (
 	"errors"
@@ -6,10 +6,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/zachmdsi/go-token-cli/internal/utils"
 )
 
-func FindERC20Tokens(ethNodeURL string, txs []string, numBlocks uint64) ([]string, error) {
+func FindERC20Tokens(ethNodeURL string, txs []string) ([]string, error) {
 	fmt.Println("\nFinding new ERC20 tokens")
 	cl, err := ethclient.Dial(ethNodeURL)
 	if err != nil {
@@ -18,7 +17,7 @@ func FindERC20Tokens(ethNodeURL string, txs []string, numBlocks uint64) ([]strin
 	var toAddresses []string
 	for _, tx := range txs {
 		txHash := common.HexToHash(tx)
-		contractAddress, err := utils.GetContractAddress(cl, txHash)
+		contractAddress, err := GetContractAddress(cl, txHash)
 		if err != nil {
 			return nil, errors.New("getContractAddress() failed: " + err.Error())
 		}
@@ -26,7 +25,7 @@ func FindERC20Tokens(ethNodeURL string, txs []string, numBlocks uint64) ([]strin
 	}
 	var erc20Addresses []string
 	for _, contractAddress := range toAddresses {
-		isERC20, err := utils.IsERC20Contract(cl, common.HexToAddress(contractAddress))
+		isERC20, err := IsERC20Contract(cl, common.HexToAddress(contractAddress))
 		if err != nil {
 			return nil, errors.New("isERC20Contract() failed: " + err.Error())
 		}
@@ -39,4 +38,3 @@ func FindERC20Tokens(ethNodeURL string, txs []string, numBlocks uint64) ([]strin
 
 	return erc20Addresses, nil
 }
-

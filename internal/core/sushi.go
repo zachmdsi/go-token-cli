@@ -1,6 +1,7 @@
-package utils
+package core
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"strings"
@@ -9,59 +10,38 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/zachmdsi/go-token-cli/internal/types"
+	"github.com/zachmdsi/go-token-cli/internal/utils"
 )
 
-func GetTokenProfile(cl *ethclient.Client, token types.Token) (types.Token, error) {
-	tokenABI, err := abi.JSON(strings.NewReader(ERC20ABI))
+func GetSushiData(cl *ethclient.Client, tokenAddress common.Address) (*big.Float, string, error) {
+	isListed, err := IsTokenOnSushi(cl, tokenAddress)
 	if err != nil {
-		return types.Token{}, err
+		return nil, "", err
+	} else if !isListed {
+		return nil, "", nil
 	}
-
-	tokenContract := bind.NewBoundContract(token.Address, tokenABI, cl, cl, cl)
-
-	var tokenName, tokenSymbol []interface{}
-
-	opts := &bind.CallOpts{}
-
-	if err := tokenContract.Call(opts, &tokenName, "name"); err != nil {
-		return types.Token{}, err
-	}
-	if err := tokenContract.Call(opts, &tokenSymbol, "symbol"); err != nil {
-		return types.Token{}, err
-	}
-
-	tokenPriceInWETH, err := GetTokenPriceInWETH(cl, token.Address)
+	tokenPriceInWETH, err := GetSushiTokenPriceInWETH(cl, tokenAddress)
 	if err != nil {
-		return types.Token{}, err
+		return nil, "", err
 	}
-	decimals, err := GetTokenDecimals(cl, token.Address)
-	if err != nil {
-		return types.Token{}, err
+	if tokenPriceInWETH == nil {
+		return nil, "", err
 	}
-
-	tokenProfile := types.Token{
-		Address: token.Address,
-		Name: tokenName[0].(string),
-		Symbol: tokenSymbol[0].(string),
-		Decimals: decimals,
-		UniswapPriceInWETH: tokenPriceInWETH,
-	}
-
-	return tokenProfile, nil
+	link := fmt.Sprintf("https://www.sushi.com/swap?fromChainId=1&fromCurrency=%s", tokenAddress)
+	return tokenPriceInWETH, link, nil
 }
 
-func GetTokenPriceInWETH(cl *ethclient.Client, tokenAddress common.Address) (*big.Float, error) {
-	factoryABI, err := abi.JSON(strings.NewReader(UniswapV2FactoryABI))
+func GetSushiTokenPriceInWETH(cl *ethclient.Client, tokenAddress common.Address) (*big.Float, error) {
+	factoryABI, err := abi.JSON(strings.NewReader(utils.SushiV2FactoryABI))
 	if err != nil {
 		return nil, err
 	}
 
-	factory := bind.NewBoundContract(UniswapFactoryAddress, factoryABI, cl, cl, cl)
+	factory := bind.NewBoundContract(utils.SushiFactoryAddress, factoryABI, cl, cl, cl)
 
 	var pairAddress common.Address
 	var factoryCallResult []interface{}
-	err = factory.Call(&bind.CallOpts{}, &factoryCallResult, "getPair", tokenAddress, WETHAddress)
+	err = factory.Call(&bind.CallOpts{}, &factoryCallResult, "getPair", tokenAddress, utils.WETHAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +49,7 @@ func GetTokenPriceInWETH(cl *ethclient.Client, tokenAddress common.Address) (*bi
 		pairAddress = factoryCallResult[0].(common.Address)
 	}
 
-	pairABI, err := abi.JSON(strings.NewReader(UniswapV2PairABI))
+	pairABI, err := abi.JSON(strings.NewReader(utils.UniswapV2PairABI))
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +85,7 @@ func GetTokenPriceInWETH(cl *ethclient.Client, tokenAddress common.Address) (*bi
 		return nil, nil
 	}
 
-	tokenDecimals, err := GetTokenDecimals(cl, tokenAddress)
+	tokenDecimals, err := utils.GetTokenDecimals(cl, tokenAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -126,23 +106,23 @@ func GetTokenPriceInWETH(cl *ethclient.Client, tokenAddress common.Address) (*bi
 
 }
 
-func GetTokenDecimals(cl *ethclient.Client, tokenAddress common.Address) (uint8, error) {
-	tokenABI, err := abi.JSON(strings.NewReader(ERC20ABI))
+func IsTokenOnSushi(cl *ethclient.Client, tokenAddress common.Address) (bool, error) {
+	factoryABI, err := abi.JSON(strings.NewReader(utils.SushiV2FactoryABI))
 	if err != nil {
-		return 0, err
+		return false, err
 	}
 
-	token := bind.NewBoundContract(tokenAddress, tokenABI, cl, cl, cl)
+	factory := bind.NewBoundContract(utils.SushiFactoryAddress, factoryABI, cl, cl, cl)
 
-	var decimals uint8
-	var tokenCallResult []interface{}
-	err = token.Call(&bind.CallOpts{}, &tokenCallResult, "decimals")
+	var pairAddress common.Address
+	var result []interface{}
+	err = factory.Call(&bind.CallOpts{}, &result, "getPair", tokenAddress, utils.WETHAddress)
 	if err != nil {
-		return 0, err
+		return false, err
 	}
-	if len(tokenCallResult) > 0 {
-		decimals = tokenCallResult[0].(uint8)
+	if len(result) > 0 {
+		pairAddress = result[0].(common.Address)
 	}
 
-	return decimals, nil
+	return pairAddress != common.Address{}, nil
 }
