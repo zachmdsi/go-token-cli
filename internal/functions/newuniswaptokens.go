@@ -1,4 +1,4 @@
-package newuniswaptokens
+package functions
 
 import (
 	"errors"

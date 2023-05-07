@@ -6,22 +6,17 @@ import (
 	"time"
 
 	"github.com/urfave/cli/v2"
-	"github.com/zachmdsi/go-token-cli/cmd/createdcontracts"
-	"github.com/zachmdsi/go-token-cli/cmd/genprofiles"
-	"github.com/zachmdsi/go-token-cli/cmd/newerc20s"
-	"github.com/zachmdsi/go-token-cli/cmd/newuniswaptokens"
+	"github.com/zachmdsi/go-token-cli/cmd/commands"
 )
 
 func main() {
 	app := &cli.App{
-		Name:     "token-cli",
+		Name:     "low-cap-token-cli",
 		Usage:    "Query data about tokens on the Ethereum blockchain.",
 		Compiled: time.Now(),
 		Commands: []*cli.Command{
-			createdcontracts.Command(),
-			newerc20s.Command(),
-			newuniswaptokens.Command(),
-			genprofiles.Command(),
+			commands.NewUniswapTokens(),
+			commands.GenerateProfiles(),
 		},
 	}
 

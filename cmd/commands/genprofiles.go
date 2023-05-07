@@ -1,15 +1,12 @@
-package genprofiles
+package commands
 
 import (
 	"github.com/urfave/cli/v2"
 	"github.com/zachmdsi/go-token-cli/internal/config"
-	"github.com/zachmdsi/go-token-cli/internal/createdcontracts"
-	"github.com/zachmdsi/go-token-cli/internal/genprofiles"
-	"github.com/zachmdsi/go-token-cli/internal/newerc20s"
-	"github.com/zachmdsi/go-token-cli/internal/newuniswaptokens"
+	"github.com/zachmdsi/go-token-cli/internal/functions"
 )
 
-func Command() *cli.Command {
+func GenerateProfiles() *cli.Command {
 	return &cli.Command{
 		Name:    "genprofiles",
 		Aliases: []string{"gp"},
@@ -27,19 +24,19 @@ func Command() *cli.Command {
 				panic("Failed to load config:\n\t\t" + err.Error())
 			}
 			numBlocks := uint64(ctx.Int64("num-blocks"))
-			txs, err := createdcontracts.FindCreatedContracts(conf.EthNodeURL, numBlocks)
+			txs, err := functions.FindCreatedContracts(conf.EthNodeURL, numBlocks)
 			if err != nil {
 				panic("Failed to create contracts:\n\t\t" + err.Error())
 			}
-			erc20Addresses, err := newerc20s.FindERC20Tokens(conf.EthNodeURL, txs, numBlocks)
+			erc20Addresses, err := functions.FindERC20Tokens(conf.EthNodeURL, txs, numBlocks)
 			if err != nil {
 				panic("Failed to find ERC20 tokens:\n\t\t" + err.Error())
 			}
-			tokens, err := newuniswaptokens.FindNewUniswapTokens(conf.EthNodeURL, erc20Addresses, numBlocks)
+			tokens, err := functions.FindNewUniswapTokens(conf.EthNodeURL, erc20Addresses, numBlocks)
 			if err != nil {
 				panic("Failed to find new Uniswap tokens:\n\t\t" + err.Error())
 			}
-			_, err = genprofiles.GenerateTokenProfiles(conf.EthNodeURL, numBlocks, tokens)
+			_, err = functions.GenerateTokenProfiles(conf.EthNodeURL, numBlocks, tokens)
 			if err != nil {
 				panic("Failed to generate token profiles:\n\t\t" + err.Error())
 			}

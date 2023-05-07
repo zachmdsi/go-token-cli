@@ -1,4 +1,4 @@
-package newerc20s
+package functions
 
 import (
 	"context"

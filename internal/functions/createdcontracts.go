@@ -1,4 +1,4 @@
-package createdcontracts
+package functions
 
 import (
 	"context"

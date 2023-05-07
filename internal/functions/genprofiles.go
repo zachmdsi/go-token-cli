@@ -1,4 +1,4 @@
-package genprofiles
+package functions
 
 import (
 	"errors"
@@ -37,6 +37,7 @@ func GenerateTokenProfiles(ethNodeURL string, numBlock uint64, tokens []types.To
 		fmt.Printf("\nAddress: %s\n", profile.Address)
 		fmt.Printf("Name: %s\n", profile.Name)
 		fmt.Printf("Symbol: %s\n", profile.Symbol)
+		fmt.Printf("Decimals: %d\n", profile.Decimals)
 		fmt.Printf("Price in WETH: %.18f\n", profile.PriceInWETH)
 	}
 
