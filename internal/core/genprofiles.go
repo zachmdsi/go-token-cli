@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/zachmdsi/go-token-cli/internal/core/contracts"
+	"github.com/zachmdsi/go-token-cli/internal/core/dexes"
 	"github.com/zachmdsi/go-token-cli/internal/types"
 )
 
@@ -63,7 +64,7 @@ func GenerateTokenProfiles(ethNodeURL string, numBlock uint64, erc20addresses []
 
 	cl, err := ethclient.Dial(ethNodeURL)
 	if err != nil {
-		return nil, fmt.Errorf("\nFailed to dial eth node: %s" + err.Error())
+		return nil, fmt.Errorf("\nFailed to dial eth node: %v", err.Error())
 	}
 
 	var tokens []*types.Token
@@ -71,17 +72,32 @@ func GenerateTokenProfiles(ethNodeURL string, numBlock uint64, erc20addresses []
 		tokenAddress := common.HexToAddress(address)
 		tokenContractData, err := contracts.GetBasicContractData(cl, tokenAddress)
 		if err != nil {
-			return nil, fmt.Errorf("\nGetBasicContractData() failed:\n\tToken Address: %s\n\tError: %s", tokenAddress, err.Error())
+			return nil, fmt.Errorf("\nGetBasicContractData() failed:\n\tToken Address: %s\n\tError: %v", tokenAddress, err)
+		} else if tokenContractData != nil {
+			tokenUniswapPriceInWETH, _, err := dexes.GetUniswapData(cl, tokenAddress)
+			if err != nil {
+				return nil, fmt.Errorf("\nGetUniswapData() failed:\n\tToken Address: %s\n\tError: %v", tokenAddress, err)
+			} else if tokenUniswapPriceInWETH != nil {
+				newToken := &types.Token{
+					Address: tokenAddress,
+					Name: tokenContractData.Name,
+					Symbol: tokenContractData.Symbol,
+					Decimals: tokenContractData.Decimals,
+					TotalSupply: tokenContractData.TotalSupply,
+					UniswapPriceInWETH: tokenUniswapPriceInWETH,
+				}
+				tokens = append(tokens, newToken)
+			}
 		}
-		tokens = append(tokens, tokenContractData)
 	}
 
 	for _, token := range tokens {
-		fmt.Printf("\nAddress:      %s\n", token.Address)
-		fmt.Printf("Name:         %s\n", token.Name)
-		fmt.Printf("Symbol:       %s\n", token.Symbol)
-		fmt.Printf("Decimals:     %d\n", token.Decimals)
-		fmt.Printf("Total Supply: %s\n", token.TotalSupply)
+		fmt.Printf("\nAddress:               %s\n", token.Address)
+		fmt.Printf("Name:                  %s\n", token.Name)
+		fmt.Printf("Symbol:                %s\n", token.Symbol)
+		fmt.Printf("Decimals:              %d\n", token.Decimals)
+		fmt.Printf("Total Supply:          %s\n", token.TotalSupply)
+		fmt.Printf("Uniswap Price in WETH: %.18f\n", token.UniswapPriceInWETH)
 		fmt.Println()
 	}
 

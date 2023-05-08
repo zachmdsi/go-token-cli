@@ -43,6 +43,7 @@ func GetBasicContractData(cl *ethclient.Client, tokenAddress common.Address) (*t
 	if err != nil {
 		return nil, fmt.Errorf("\nTotalSupply() failed:\n\tToken Address: %s\n\tError: %s", tokenAddress, err.Error())
 	}
+	totalSupply = utils.CalculateTotalSupply(totalSupply, decimals)
 
 	tokenData := &types.Token{
 		Address: tokenAddress,
