@@ -1,49 +1,89 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/zachmdsi/go-token-cli/internal/core/contracts"
 	"github.com/zachmdsi/go-token-cli/internal/types"
 )
 
-func GenerateTokenProfiles(ethNodeURL string, numBlock uint64, erc20addresses []string) ([]types.Token, error) {
+/*
+	Generating a token profile will occur in several steps:
+
+	We are already given a list of ERC20 contract addresses so we start with:
+
+		1. Get basic contract data:
+
+			- Name
+			- Symbol
+			- Total Supply
+			- Decimals
+
+			Directly interact with the contract at the given address to get this data
+
+		2. Get DEX data:
+
+			- Uniswap
+			- Sushi
+			- Curve
+
+			Each DEX will include:
+
+				- Timestamp
+				- Price in WETH
+				- Price in USDC
+				- Link to trade
+
+			Use the factory contracts for each given DEX to calculate
+
+			Eventually, each token profile is added to a PostgreSQL db that stores historical price data
+			Since this program is focused on newly minted tokens (past 7 days), the db
+			is pruned of old data weekly to an archived db. Which leads to the third step:
+
+		3. Calculate necessary data:
+
+			- Circulating Supply
+			- Market Cap
+			- Volume 1H
+			- Price Change 1H
+			- Holders
+			- Largest Holders
+			- Token Transfers
+
+			There may possibly be other data points due to the uniqueness of this data (i.e. Price Change per Tx)
+			We use the 1H interval since the lifetime of these newly minted tokens is quite low so we need a bigger microscope
+			This will only be possible once the db has been integrated
+
+*/
+
+func GenerateTokenProfiles(ethNodeURL string, numBlock uint64, erc20addresses []string) ([]*types.Token, error) {
 	fmt.Println("\nGenerating token profiles")
-	tokens := CreateTokens(ethNodeURL, erc20addresses)
-	var tokenProfiles []types.Token
+
 	cl, err := ethclient.Dial(ethNodeURL)
 	if err != nil {
-		return nil, errors.New("Failed to create ethclient: " + err.Error())
+		return nil, fmt.Errorf("\nFailed to dial eth node: %s" + err.Error())
 	}
-	for _, token := range tokens {
-		exists, err := ExistsOnADEX(cl, token)
+
+	var tokens []*types.Token
+	for _, address := range erc20addresses {
+		tokenAddress := common.HexToAddress(address)
+		tokenContractData, err := contracts.GetBasicContractData(cl, tokenAddress)
 		if err != nil {
-			return nil, errors.New("ExistsOnADEX() failed: " + err.Error())
+			return nil, fmt.Errorf("\nGetBasicContractData() failed:\n\tToken Address: %s\n\tError: %s", tokenAddress, err.Error())
 		}
-		if exists {
-			tokenProfile, err := GetTokenProfile(cl, token)
-			if err != nil {
-				return nil, errors.New("getTokenProfile() failed: " + err.Error())
-			} else if tokenProfile.UniswapPriceInWETH == nil {
-				continue
-			}
-			tokenProfiles = append(tokenProfiles, tokenProfile)
-		}
+		tokens = append(tokens, tokenContractData)
 	}
 
-	fmt.Printf("Generated %d token profiles\n", len(tokenProfiles))
-	for _, profile := range tokenProfiles {
-		fmt.Printf("\nAddress: %s\n", profile.Address)
-		fmt.Printf("Name: %s\n", profile.Name)
-		fmt.Printf("Symbol: %s\n", profile.Symbol)
-		fmt.Printf("Decimals: %d\n", profile.Decimals)
-		fmt.Printf("Total Supply: %d\n", profile.TotalSupply)
-		fmt.Printf("Uniswap Price in WETH: %.18f\n", profile.UniswapPriceInWETH)
-		fmt.Printf("Sushi Price in WETH: %.18f\n", profile.SushiPriceInWETH)
-		fmt.Printf("Uniswap Link: %s\n", profile.UniswapLink)
-		fmt.Printf("Sushi Link: %s\n", profile.SushiLink)
+	for _, token := range tokens {
+		fmt.Printf("\nAddress:      %s\n", token.Address)
+		fmt.Printf("Name:         %s\n", token.Name)
+		fmt.Printf("Symbol:       %s\n", token.Symbol)
+		fmt.Printf("Decimals:     %d\n", token.Decimals)
+		fmt.Printf("Total Supply: %s\n", token.TotalSupply)
+		fmt.Println()
 	}
 
-	return tokenProfiles, nil
+	return tokens, nil
 }

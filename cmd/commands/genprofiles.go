@@ -4,6 +4,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"github.com/zachmdsi/go-token-cli/internal/config"
 	"github.com/zachmdsi/go-token-cli/internal/core"
+	"github.com/zachmdsi/go-token-cli/internal/core/contracts"
 )
 
 func GenerateProfiles() *cli.Command {
@@ -24,11 +25,11 @@ func GenerateProfiles() *cli.Command {
 				panic("Failed to load config:\n\n\t" + err.Error())
 			}
 			numBlocks := uint64(ctx.Int64("num-blocks"))
-			txs, err := core.FindCreatedContracts(conf.EthNodeURL, numBlocks)
+			txs, err := contracts.FindCreatedContracts(conf.EthNodeURL, numBlocks)
 			if err != nil {
 				panic("Failed to create contracts:\n\n\t" + err.Error())
 			}
-			erc20Addresses, err := core.FindERC20Tokens(conf.EthNodeURL, txs)
+			erc20Addresses, err := contracts.FindERC20Tokens(conf.EthNodeURL, txs)
 			if err != nil {
 				panic("Failed to find ERC20 tokens:\n\n\t" + err.Error())
 			}
